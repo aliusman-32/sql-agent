@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Agent Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center min-h-screen p-4">
+
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">SQL Agent Chat</h1>
+
+  <div class="w-full max-w-xl bg-white shadow-lg rounded-lg flex flex-col">
+    <!-- Conversation Container -->
+    <div id="chatContainer" class="flex-1 p-4 overflow-auto max-h-[500px] flex flex-col gap-3">
+      <p class="text-gray-400 text-center">Start by typing your query below...</p>
+    </div>
+
+    <!-- Input Area -->
+    <div class="border-t border-gray-200 p-4 flex gap-2">
+      <textarea id="queryInput" rows="1" class="flex-1 border border-gray-300 rounded px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type your query..."></textarea>
+      <button id="sendBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const sendBtn = document.getElementById('sendBtn');
+    const queryInput = document.getElementById('queryInput');
+    const chatContainer = document.getElementById('chatContainer');
+
+    // Helper to create chat bubbles
+    function createBubble(text, isUser) {
+      const bubble = document.createElement('div');
+      bubble.className = `max-w-[80%] p-3 rounded-lg whitespace-pre-wrap ${
+        isUser ? 'self-end bg-blue-600 text-white' : 'self-start bg-gray-200 text-gray-800'
+      }`;
+      bubble.textContent = text;
+      return bubble;
+    }
+
+    // Send query
+    sendBtn.addEventListener('click', async () => {
+      const query = queryInput.value.trim();
+      if (!query) return;
+      queryInput.value = '';
+
+      // Show user message
+      chatContainer.appendChild(createBubble(`${query}`, true));
+
+      // Show loading indicator
+      const loading = document.createElement('div');
+      loading.className = 'self-start text-gray-500 italic';
+      loading.textContent = 'Agent is thinking...';
+      chatContainer.appendChild(loading);
+
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      try {
+        const res = await fetch('http://localhost:8000/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+
+        const data = await res.json();
+        loading.remove();
+
+        // Show agent response
+        chatContainer.appendChild(createBubble(`${data.response}`, false));
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      } catch (err) {
+        loading.textContent = `Error: ${err.message}`;
+        loading.className = 'self-start text-red-500';
+      }
+    });
+
+    // Press Enter to send query
+    queryInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
